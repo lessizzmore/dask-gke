@@ -45,14 +45,14 @@ spec:
           ]
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: a4-highgpu-8g-a4-pool
+        cloud.google.com/gke-nodepool: a4-highgpu-8g-a4-highgpu-pool
       tolerations:
       - key: "nvidia.com/gpu"
         operator: "Exists"
         effect: "NoSchedule"
       containers:
       - name: scheduler
-        image: asia-southeast1-docker.pkg.dev/northam-ce-mlai-tpu/jt-repo/dask-gke:latest
+        image: us-east4-docker.pkg.dev/northam-ce-mlai-tpu/anarasimham-benchmark-repo/amex-dask@sha256:7e09d9c69d08cdcfb8300c45a7e0d2769392e93438d5cf28d5000b9260d21686
         command: ["/bin/bash"]
         args:
           - "-c"
@@ -65,28 +65,50 @@ spec:
           containerPort: 8787
           protocol: TCP
         volumeMounts:
-        - name: gcsfuse-test
-          mountPath: /code
+        - name: gcsfuse-v
+          mountPath: /app
+        - name: library-dir-host
+          mountPath: /usr/local/nvidia
+        - name: gib
+          mountPath: /usr/local/gib
         - name: shared-memory
           mountPath: /dev/shm
+        - name: nvidia
+          mountPath: /usr/local/nvidia/lib64
+        env:
+        - name: LD_LIBRARY_PATH
+          value: /usr/local/nvidia/lib64
         resources:
           requests:
             cpu: "4"
             memory: "16Gi"
+            nvidia.com/gpu: 8 
           limits:
             cpu: "8"
             memory: "32Gi"
-      serviceAccountName: zt-fuse-ksa
+            nvidia.com/gpu: 8 
+      serviceAccountName: workload-identity-k8s-sa
       volumes:
-      - name: gcsfuse-test
+      - name: gcsfuse-v
         csi:
           driver: gcsfuse.csi.storage.gke.io
           volumeAttributes:
-            bucketName: zt-dask-datagen
+            bucketName: anarasimham-dask
             mountOptions: "implicit-dirs,file-mode=777"
+            volumes:
+      - name: library-dir-host
+        hostPath:
+          path: /home/kubernetes/bin/nvidia
+      - name: gib
+        hostPath:
+          path: /home/kubernetes/bin/gib
       - name: shared-memory
         emptyDir:
           medium: "Memory"
+          sizeLimit: 250Gi
+      - name: nvidia
+        hostPath:
+          path: /home/kubernetes/bin/nvidia/lib64
 ---
 apiVersion: v1
 kind: Service
