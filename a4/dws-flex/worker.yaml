@@ -20,7 +20,7 @@ metadata:
   labels:
     app: dask-worker
 spec:
-  replicas: 4 # You can scale this number based on your needs
+  replicas: 2 # You can scale this number based on your needs
   selector:
     matchLabels:
       app: dask-worker
@@ -70,7 +70,7 @@ spec:
         command: ["/bin/bash"]
         args:
           - "-c"
-          - "source /opt/conda/etc/profile.d/conda.sh && conda activate rapids && dask-cuda-worker tcp://dask-scheduler-svc:8786 --nthreads 1 --name $(hostname) --interface eth0"
+          - "source /opt/conda/etc/profile.d/conda.sh && conda activate rapids && dask-cuda-worker tcp://dask-scheduler-svc:8786 --nthreads 1 --name $(hostname) --interface eth0 >> /app/log/worker-$(hostname).log 2>&1"
         resources:
           requests:
             cpu: "222"

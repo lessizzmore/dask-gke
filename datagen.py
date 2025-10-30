@@ -21,9 +21,10 @@ from dask.distributed import wait
 def main():
     client = Client('tcp://dask-scheduler-svc:8786', timeout="30s")
 
-    totalsize = '6TB'
+    totalsize = '1.25TB'
     ncols = 400
-    gcs_loc = "gs://anarasimham-amex-test-south1/datagen"
+    gcs_loc = "gs://anarasimham-dask/datagen-small"
+    npartitions=1000
 
     print("=== Generating Synthetic Data ===")
     data_size = convert_size_to_bytes(totalsize)
@@ -31,6 +32,7 @@ def main():
 
     print(f"Generating data with the following dimensions: {ncols} ncols x {nrows} nrows")
 
+    #if not gpu_full_random_data:
     print("=== Generating make_classification GPU dataset ===")
     X, y = make_classification(
         n_samples=nrows,
@@ -45,7 +47,8 @@ def main():
         dtype="float32",
         client=client
     )
-    combined_df = cudf.concat([X,y])
+    y = y.reshape(y.shape[0], 1)
+    combined_array = da.concatenate([X,y], axis=1)
 
     dask.config.set({"dataframe.backend": "cupy"})
     combined_df = dd.from_dask_array(combined_array)
@@ -57,9 +60,6 @@ def main():
     feature_names = [str(i) for i in range(ncols)]
     column_names = feature_names + ['target'] # Add the target column name
     combined_df.columns = column_names
-
-    combined_df.persist()
-    wait([combined_df])
 
     combined_df.to_parquet(
         gcs_loc,
