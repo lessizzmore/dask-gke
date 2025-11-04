@@ -25,10 +25,10 @@ gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION --proje
 
 ```
 ## Deploy Dask Scheduler and Workers
+In this example, both the dask scheduler and the 2 dask workers are deployed in the same a4 node pool.
+Each dask worker requests 8 B200 GPUs (1 A4 VM).
+To change the number of dask worker, change replicas: 2 as you need
 ```
-## In this example, both the dask scheduler and the 2 dask workers are deployed in the same a4 node pool.
-## Each dask worker requests 8 B200 GPUs (1 A4 VM)
-## To change the number of dask worker, change replicas: 2 as you need
 kubectl apply -f scheduler.yaml
 kubectl apply -f worker.yaml
 ```
