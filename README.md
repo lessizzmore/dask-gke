@@ -9,7 +9,6 @@ For this recipe, deploy A4 GKE Node Pool using [Cluster Toolkit](https://github.
 
 ## Build and Push Docker Image
 ```
-# build and push docker image
 ## Define a variable for your image name to make it easy to reference
 export IMAGE_NAME=""
 
@@ -25,9 +24,10 @@ gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION --proje
 
 ```
 ## Deploy Dask Scheduler and Workers
-In this example, both the dask scheduler and the 2 dask workers are deployed in the same a4 node pool.
+In this example, both the dask scheduler and the 2 dask workers are deployed in the same a4 node pool. Dask scheduler and workers are connected using Service `dask-worker tcp://dask-scheduler-svc:8786`
 Each dask worker requests 8 B200 GPUs (1 A4 VM).
-To change the number of dask worker, change replicas: 2 as you need
+To change the number of dask worker, change replicas: 2 as you need.
+
 ```
 kubectl apply -f scheduler.yaml
 kubectl apply -f worker.yaml
