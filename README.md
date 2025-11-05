@@ -3,6 +3,29 @@
 This recipe outlines the steps for running a XGBoost training workload on
 [A4 GKE Node pools](https://cloud.google.com/kubernetes-engine).
 
+## Deployment Overview
+You have a persistent Dask cluster (scheduler and workers managed by Deployments) and a one-off task (data generation) managed by a Job. The Job leverages the Dask cluster to parallelize and accelerate the data generation process. 
+
+Scheduler Deployment:
+
+This ensures that a Dask scheduler pod is always running and available. If the pod dies, Kubernetes will automatically create a new one.
+
+Worker Deployments:
+
+Each Deployment manages a set of Dask worker pods. Like the scheduler, Deployments ensure that the desired number of worker pods are always running.
+
+Service:
+
+The Service provides a stable network endpoint (a consistent IP address and DNS name) for the Dask scheduler. This is crucial because the scheduler's pod IP address can change if the pod is restarted. The workers use the Service's DNS name (e.g., dask-scheduler-svc) to discover and connect to the scheduler. This allows the workers to communicate with the scheduler regardless of which pod is currently running the scheduler process.
+
+Data Generation/Training Job:
+
+The datagen.py script is executed as a Kubernetes Job. A Job creates one or more pods and ensures that a specified number of them successfully complete their tasks.
+In this case, the Job will run a pod that executes datagen.py. The datagen.py script connects to the Dask scheduler (using the Service's address) and submits tasks to the Dask cluster to generate the data.
+The Job pod acts as a client to the Dask cluster. It orchestrates the data generation process but doesn't directly perform the data generation itself. The actual data generation is distributed across the Dask workers.
+Once datagen.py completes its task (i.e., all data has been generated), the Job's pod will terminate, and the Job will be marked as completed.
+
+
 ## Orchestration and Deployment Tools
 
 For this recipe, deploy A4 GKE Node Pool using [Cluster Toolkit](https://github.com/AI-Hypercomputer/gpu-recipes/blob/main/docs/configuring-environment-gke-a4.md)
