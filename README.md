@@ -18,6 +18,55 @@ docker build -t $IMAGE_NAME .
 ## Push docker image to artifact registry
 docker push $IMAGE_NAME
 ```
+
+## Create GCS bucket for Data Generation
+
+```
+BUCKET_NAME="zt-dask-datagen"
+REGION="US-CENTRAL1"
+gcloud storage buckets create gs://${BUCKET_NAME} \
+    --project=$(gcloud config get-value project) \
+    --location=${REGION} \
+    --storage-class=STANDARD
+```
+
+## Create k8s Service Account
+
+```
+kubectl create serviceaccount zt-fuse-ksa -n default
+```
+
+## Create the IAM Service Account (GSA) and Grant GCS Permissions
+
+```
+# Create the IAM Service Account (use the same name for clarity)
+export PROJECT_ID=$(gcloud config get-value project)
+export GSA_NAME="zt-fuse-gsa"
+
+gcloud iam service-accounts create $GSA_NAME \
+    --display-name "GCS FUSE Service Account"
+
+# Grant the GSA the necessary Storage permissions
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+   --member="serviceAccount:${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+   --role="roles/storage.objectAdmin"
+```
+
+## Binds KSA to GSA (Workload Identity)
+
+```
+export K8S_SA_NAME="zt-fuse-ksa"
+export NAMESPACE="default"
+
+gcloud iam service-accounts add-iam-policy-binding \
+    "${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/iam.workloadIdentityUser" \
+    --member="serviceAccount:${PROJECT_ID}.svc.id.goog[${NAMESPACE}/${K8S_SA_NAME}]"
+
+kubectl annotate serviceaccount $K8S_SA_NAME -n $NAMESPACE \
+    iam.gke.io/gcp-service-account="${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+```
+
 ## Connect to GKE cluster
 ```
 gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION --project $PROJECT_ID
